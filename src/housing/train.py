@@ -7,6 +7,7 @@ import pickle
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LinearRegression
+from sklearn.base import BaseEstimator, TransformerMixin
 
 from .logs import logger
 
@@ -35,6 +36,20 @@ def load_housing_dataset(data_path=DATA_PATH):
     return pd.read_csv(train_path), pd.read_csv(valid_path)
 
 
+class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
+    def __init__(self): # no *args or **kargs
+        pass
+        
+    def fit(self, X, y=None):
+        return self  # nothing else to do
+    
+    def transform(self, X):
+        rooms_per_household = X[:, rooms_ix] / X[:, households_ix]
+        population_per_household = X[:, population_ix] / X[:, households_ix]
+        bedrooms_per_room = X[:, bedrooms_ix] / X[:, rooms_ix]
+        return np.c_[X, rooms_per_household, population_per_household, bedrooms_per_room]
+
+
 train_set, test_set = load_housing_dataset(DATA_PATH)
 
 
@@ -52,20 +67,19 @@ X = imputer.transform(housing_num)
 
 housing_tr = pd.DataFrame(X, columns=housing_num.columns, index=housing.index)
 
-housing_tr["rooms_per_household"] = (
-    housing_tr["total_rooms"] / housing_tr["households"]
-)
+col_names = "total_rooms", "total_bedrooms", "population", "households"
+rooms_ix, bedrooms_ix, population_ix, households_ix = [
+    housing.columns.get_loc(c) for c in col_names] # get the column indices
 
-housing_tr["rooms_per_household"] = (
-    housing_tr["total_rooms"] / housing_tr["households"]
-)
+attr_adder = CombinedAttributesAdder()
+housing_extra_attribs = attr_adder.transform(housing.values)
 
-housing_tr["bedrooms_per_room"] = (
-    housing_tr["total_bedrooms"] / housing_tr["total_rooms"]
-)
-housing_tr["population_per_household"] = (
-    housing_tr["population"] / housing_tr["households"]
-)
+housing_extra_attribs = pd.DataFrame(
+    housing_extra_attribs,
+    columns=list(housing.columns)+["rooms_per_household", "population_per_household", "bedrooms_per_room"],
+    index=housing.index)
+
+housing_tr = housing_extra_attribs
 
 housing_cat = housing[["ocean_proximity"]]
 
@@ -88,19 +102,24 @@ housing_predictions = lin_reg.predict(housing_prepared)
 X_test = test_set.drop("median_house_value", axis=1)
 y_test = test_set["median_house_value"].copy()
 
+col_names = "total_rooms", "total_bedrooms", "population", "households"
+rooms_ix, bedrooms_ix, population_ix, households_ix = [
+    X_test.columns.get_loc(c) for c in col_names] # get the column indices
+
+attr_adder = CombinedAttributesAdder()
+housing_extra_attribs = attr_adder.transform(X_test.values)
+
+housing_extra_attribs = pd.DataFrame(
+    housing_extra_attribs,
+    columns=list(X_test.columns)+["rooms_per_household", "population_per_household", "bedrooms_per_room"],
+    index=X_test.index)
+
+X_test = housing_extra_attribs
+
 X_test_num = X_test.drop("ocean_proximity", axis=1)
 X_test_prepared = imputer.transform(X_test_num)
 X_test_prepared = pd.DataFrame(
     X_test_prepared, columns=X_test_num.columns, index=X_test.index
-)
-X_test_prepared["rooms_per_household"] = (
-    X_test_prepared["total_rooms"] / X_test_prepared["households"]
-)
-X_test_prepared["bedrooms_per_room"] = (
-    X_test_prepared["total_bedrooms"] / X_test_prepared["total_rooms"]
-)
-X_test_prepared["population_per_household"] = (
-    X_test_prepared["population"] / X_test_prepared["households"]
 )
 
 X_test_cat = X_test[["ocean_proximity"]]

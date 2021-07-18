@@ -53,7 +53,6 @@ class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
         bedrooms_per_room = X[:, bedrooms_ix] / X[:, rooms_ix]
         return np.c_[X, rooms_per_household, population_per_household, bedrooms_per_room]
 
-
 def main():
     train_set, test_set = load_housing_dataset(DATA_PATH)
 
@@ -101,47 +100,50 @@ def main():
     lin_reg.fit(housing_prepared, housing_labels)
 
 
-    # housing_predictions = lin_reg.predict(housing_prepared)
+    housing_predictions = lin_reg.predict(housing_prepared)
 
 
-    # X_test = test_set.drop("median_house_value", axis=1)
-    # y_test = test_set["median_house_value"].copy()
+    X_test = test_set.drop("median_house_value", axis=1)
+    y_test = test_set["median_house_value"].copy()
 
-    # col_names = "total_rooms", "total_bedrooms", "population", "households"
-    # rooms_ix, bedrooms_ix, population_ix, households_ix = [
-    #     X_test.columns.get_loc(c) for c in col_names] # get the column indices
+    X_test_num = X_test.drop("ocean_proximity", axis=1)
+    X_test_prepared = imputer.transform(X_test_num)
+    X_test_prepared = pd.DataFrame(
+        X_test_prepared, columns=X_test_num.columns, index=X_test.index
+    )
 
-    # attr_adder = CombinedAttributesAdder()
-    # housing_extra_attribs = attr_adder.transform(X_test.values, rooms_ix, bedrooms_ix, population_ix, households_ix)
+    col_names = "total_rooms", "total_bedrooms", "population", "households"
+    rooms_ix, bedrooms_ix, population_ix, households_ix = [
+        X_test.columns.get_loc(c) for c in col_names] # get the column indices
 
-    # housing_extra_attribs = pd.DataFrame(
-    #     housing_extra_attribs,
-    #     columns=list(X_test.columns)+["rooms_per_household", "population_per_household", "bedrooms_per_room"],
-    #     index=X_test.index)
+    attr_adder = CombinedAttributesAdder()
+    housing_extra_attribs = attr_adder.transform(X_test.values, rooms_ix, bedrooms_ix, population_ix, households_ix)
 
-    # X_test = housing_extra_attribs
+    housing_extra_attribs = pd.DataFrame(
+        housing_extra_attribs,
+        columns=list(X_test.columns)+["rooms_per_household", "population_per_household", "bedrooms_per_room"],
+        index=X_test.index)
 
-    # X_test_num = X_test.drop("ocean_proximity", axis=1)
-    # X_test_prepared = imputer.transform(X_test_num)
-    # X_test_prepared = pd.DataFrame(
-    #     X_test_prepared, columns=X_test_num.columns, index=X_test.index
-    # )
+    X_test = housing_extra_attribs
 
-    # X_test_cat = X_test[["ocean_proximity"]]
+    X_test_cat = X_test[["ocean_proximity"]]
 
-    # X_test_prepared = X_test_prepared.join(
-    #     pd.get_dummies(X_test_cat, drop_first=True)
-    # )
+    X_test_prepared = X_test_prepared.join(
+        pd.get_dummies(X_test_cat, drop_first=True)
+    )
 
-    # X_test_prepared_tr = X_test_prepared.copy()
-    # X_test_prepared_tr["median_house_value"] = y_test
+    X_test_prepared_tr = X_test_prepared.copy()
+    X_test_prepared_tr["median_house_value"] = y_test
+
 
     housing_prepared_tr.to_csv(
         os.path.join(DATA_PATH, "train_processed.csv"), index=False
     )
-    # X_test_prepared_tr.to_csv(
-    #     os.path.join(DATA_PATH, "valid_processed.csv"), index=False
-    # )
+
+    X_test_prepared_tr.to_csv(
+        os.path.join(DATA_PATH, "valid_processed.csv"), index=False
+    )
+
 
     with open(os.path.join(MODEL_PATH, "linear_model.pkl"), "wb") as file:
         pickle.dump(lin_reg, file)

@@ -52,7 +52,7 @@ class CombinedAttributesAdder(BaseEstimator, TransformerMixin):
         population_per_household = X[:, population_ix] / X[:, households_ix]
         bedrooms_per_room = X[:, bedrooms_ix] / X[:, rooms_ix]
         return np.c_[X, rooms_per_household, population_per_household, bedrooms_per_room]
-    
+
 def main():
     train_set, test_set = load_housing_dataset(DATA_PATH)
 
@@ -135,12 +135,15 @@ def main():
     X_test_prepared_tr = X_test_prepared.copy()
     X_test_prepared_tr["median_house_value"] = y_test
 
+
     housing_prepared_tr.to_csv(
         os.path.join(DATA_PATH, "train_processed.csv"), index=False
     )
+
     X_test_prepared_tr.to_csv(
         os.path.join(DATA_PATH, "valid_processed.csv"), index=False
     )
+
 
     with open(os.path.join(MODEL_PATH, "linear_model.pkl"), "wb") as file:
         pickle.dump(lin_reg, file)

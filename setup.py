@@ -8,6 +8,6 @@ setup(
     author="Seemant Singh",
     author_email="seemant.singh@tigeranalytics.com",
     license="MIT",
-    packages=["housing"],
+    packages=["src/housing"],
     zip_safe=False,
 )

@@ -14,7 +14,6 @@ The following techniques have been used:
  - Multiple sampling techinuqies are evaluated. The data set is split into train and test.
  - All the above said modelling techniques are tried and evaluated. The final metric used to evaluate is mean squared error.
 
-## To excute the script
-python ingest_data.py
-python train.py
-python score.py
+## To install the package
+ - conda env create --file environment.yml
+ - pip install housing-0.1-py3-none-any.whl
